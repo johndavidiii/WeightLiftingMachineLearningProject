@@ -1,0 +1,332 @@
+---
+title: "Course8Project"
+author: "John David"
+date: "8/23/2019"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Weight Lifting - Machine Learning Project
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+Approach:
+   My approach was to explore the data set and analyze what actions best describe how to correctly curl weight.  So I explored cleaned and explored the data and used that subset of data to form my models.  I did a K fold cross validation, K=20 and I built an qda model and a lda model and had well ok results then I used a random forest model and tuned it to achieve a 98.65% accuracy on my test data.
+
+Conclusion:
+  It was fun to analyze the data myself but I could have used the randomforest to do it.  All in all I enjoyed this lab and used all my previous John Hopkins classes to find this success.
+
+
+
+References:
+http://www-personal.umich.edu/~johannb/Papers/paper63.pdf
+https://www.google.com/search?q=pitch+roll+and+yaw&tbm=isch&source=iu&ictx=1&fir=4R5jctF0uP_q5M%253A%252CrwdN0Ut4Lf6FUM%252C%252Fm%252F04gmp6w&vet=1&usg=AI4_-kR4vLK3GkH5rhntURhlMELz4kTd0g&sa=X&ved=2ahUKEwiF-4jEhZnkAhVldt8KHU2fB3UQ_B0wG3oECAEQAw#imgrc=4R5jctF0uP_q5M:
+
+
+```{r }
+library("dplyr")
+library("ggplot2")
+library("mlbench")
+library("caret")
+#library("MASS")
+
+apply.type.rules <- function(tmpDF){
+  if (tmpDF["classe"] == "A"){
+    return (1)
+  }else if (tmpDF["classe"] == "B"){
+    return (2)
+  }else if (tmpDF["classe"] == "C"){
+    return (3)
+  }else if (tmpDF["classe"] == "D"){
+    return (4)
+  }else if (tmpDF["classe"] == "E"){
+    return (5)
+  }else if (tmpDF["classe"] == "F"){
+    return (6)
+  }else{
+    return (100)
+  }
+  
+}
+
+
+
+
+trainingDF <- read.csv(file="/Users/douglasashworth/Documents/Coursera/DataScience/Course_8_Machine_Learning/Project/pml-training.csv", stringsAsFactors = FALSE)
+
+
+#summary(trainingDF)
+#str(trainingDF)
+names(trainingDF)
+str(trainingDF)
+
+
+
+classeADF <- trainingDF[trainingDF['classe'] == "A",]
+classeBDF <- trainingDF[trainingDF['classe'] == "B",]
+classeCDF <- trainingDF[trainingDF['classe'] == "C",]
+classeDDF <- trainingDF[trainingDF['classe'] == "D",]
+classeEDF <- trainingDF[trainingDF['classe'] == "E",]
+classeFDF <- trainingDF[trainingDF['classe'] == "F",]
+
+#classADumbbellDF <- select(classeADF,roll_dumbbell,pitch_dumbbell,yaw_dumbbell)
+#colnames(classADumbbellDF) <- c("Roll.Dumbbell","Pitch.Dumbbell","Yaw.Dumbbell")
+
+#head(classADumbbellDF)
+#dim(classADumbbellDF)
+
+#n = 3510:(3510+470)
+
+#classeAForearmDF <- select(classeADF,roll_forearm, pitch_forearm, yaw_forearm)
+#colnames(classeAForearmDF) <- c("Roll.Forearm","Pitch.Forearm","Yaw.Forearm")
+#plot(classeAForearmDF$pitch_forearm[n])
+
+#minPV <- apply(classeAForearmDF,2,min)
+#abs(minPV)
+#tempDF2 <- mutate(classeAForearmDF, log2Pitch = log2(pitch_forearm+abs(minPV)))
+
+#head(tempDF2,10)
+#plot(tempDF2$log2Pitch[n])
+#useless
+#classAArmDF <- select(classeADF, roll_arm, pitch_arm, yaw_arm)
+#plot(classAArmDF$pitch_arm)
+
+#classeABeltDF <- select(classeADF,roll_belt,pitch_belt,yaw_belt)
+#plot(classeABeltDF$pitch_belt[n])
+
+#useless
+#classeAGyroForearmDF <- select(classeADF, gyros_forearm_x, gyros_forearm_y, gyros_forearm_z)
+#plot(classeAGyroForearmDF$gyros_forearm_z)
+
+#classeAGyroArmDF <- select(classeADF, gyros_arm_x, gyros_arm_y, gyros_arm_z)
+#plot(classeAGyroArmDF$gyros_arm_z)
+
+#classeAGyroBeltDF <- select(classeADF, gyros_belt_x, gyros_belt_y, gyros_belt_z)
+#plot(classeAGyroBeltDF$gyros_belt_z)
+
+
+
+#correlMtrx <- cor(trainingDF[,8:159])
+#highlyCorrel <- findCorrelation(correlMtrx, cutoff=0.5)
+#print(highlyCorrel)
+
+
+
+selectedInputDF = select(trainingDF, roll_forearm, pitch_forearm, yaw_forearm, roll_arm, pitch_arm, yaw_arm, roll_belt, pitch_belt, yaw_belt, classe)
+
+typeAry <- c()
+for (k in 1:nrow(selectedInputDF)){
+  typeAry <- c(typeAry,"NA")
+}
+
+#selectedInputDF$Type=typeAry
+
+head(selectedInputDF,10)
+tail(selectedInputDF)
+#str(selectedInputDF)
+
+Type <- apply(X=selectedInputDF,MARGIN=1,FUN=apply.type.rules)
+
+str(Type)
+
+finalDF <- cbind(selectedInputDF,Type)
+
+head(finalDF)
+tail(finalDF)
+str(finalDF)
+
+summary(finalDF)
+tempDF2 <- finalDF[,1:10]
+Type <- finalDF['Type']
+#tdf <- data.frame({"Type"=typeLst})
+#tempDF2 <- cbind(tempDF2, Type)
+
+head(tempDF2)
+
+correlMtrx <- cor(tempDF2[,1:9])
+highlyCorrel <- findCorrelation(correlMtrx, cutoff=0.5)
+print(highlyCorrel)
+#data(PimaIndiansDiabetes)
+#head(PimaIndiansDiabetes)
+
+
+#control <- trainControl(method = "repeatedcv",number = 10,repeats=3)
+#model <- train(classe~.,data=tempDF2,method="lvq",preProcess="scale",trControl=control)
+#importance <- varImp(model,scale=FALSE)
+#print(importance)
+#plot(importance)
+
+################################ Exploring the Data ######################################
+
+plotDF <- finalDF
+plotDF$classe <- as.factor(plotDF$classe)
+str(plotDF)
+#print(names(plotDF))
+
+bxpRFA <- ggplot(plotDF,aes(x=classe,y=roll_forearm)) + geom_boxplot()
+plot(bxpRFA)
+
+bxpPFA <- ggplot(plotDF,aes(x=classe,y=pitch_forearm)) + geom_boxplot()
+plot(bxpPFA)
+
+bxpYFA <- ggplot(plotDF,aes(x=classe,y=yaw_forearm)) + geom_boxplot()
+plot(bxpYFA)
+
+bxpRA <- ggplot(plotDF,aes(x=classe,y=roll_arm)) + geom_boxplot()
+plot(bxpRA)
+
+bxpPA <- ggplot(plotDF,aes(x=classe,y=pitch_arm)) + geom_boxplot()
+plot(bxpPA)
+
+bxpYA <- ggplot(plotDF,aes(x=classe,y=yaw_arm)) + geom_boxplot()
+plot(bxpYA)
+
+bxpRB <- ggplot(plotDF,aes(x=classe,y=roll_belt)) + geom_boxplot()
+plot(bxpRB)
+
+bxpPB <- ggplot(plotDF,aes(x=classe,y=pitch_belt)) + geom_boxplot()
+plot(bxpPB)
+
+bxpYB <- ggplot(plotDF,aes(x=classe,y=yaw_belt)) + geom_boxplot()
+plot(bxpYB)
+
+
+
+###################### K cross over validation and qda and lda analysis
+
+
+
+library(MASS)
+
+tempDF2$classe=factor(tempDF2$classe)
+str(tempDF2)
+
+K <- 20
+folds <- cut(seq(1,nrow(tempDF2)),breaks = K,labels=FALSE)
+head(folds)
+set.seed(1)
+cv.qda <- sapply(1:K, FUN = function(i) {
+  testID <- which(folds == i, arr.ind = TRUE)
+  test <- tempDF2[testID,]
+  train <- tempDF2[-testID,]
+  qdaf <- qda(classe~.,data=train)
+  qda.pred <- predict(qdaf, test)
+  cv.est.qda <- mean(qda.pred$class != test$classe)
+  return(cv.est.qda)
+})
+print(cv.qda)
+print(mean(cv.qda))
+
+K <- 20
+folds <- cut(seq(1,nrow(tempDF2)),breaks = K,labels=FALSE)
+head(folds)
+set.seed(1)
+cv.lda <- sapply(1:K, FUN = function(i) {
+  testID <- which(folds == i, arr.ind = TRUE)
+  test <- tempDF2[testID,]
+  train <- tempDF2[-testID,]
+  ldaf <- lda(classe~.,data=train)
+  lda.pred <- predict(ldaf, test)
+  cv.est.lda <- mean(lda.pred$class != test$classe)
+  return(cv.est.lda)
+})
+print(cv.lda)
+print(mean(cv.lda))
+str(finalDF)
+names(finalDF)
+
+
+################################ Random Forest #################################3
+
+
+DF51 <- finalDF[,1:9]
+DF52 <- finalDF[,10]
+names(DF51)
+names(DF52)
+rndforestDF <- cbind(DF51,Type)
+rndforestDF$Type <- as.factor(rndforestDF$Type)
+names(rndforestDF)
+str(rndforestDF)
+
+table(rndforestDF$Tpe)
+set.seed(325)
+ind <- sample(2,nrow(rndforestDF),replace = TRUE,prob = c(0.7, 0.3))
+train <- rndforestDF[ind==1,]
+test <- rndforestDF[ind==2,]
+
+library(randomForest)
+set.seed(757)
+rf <- randomForest(Type~.,data=train)
+print(rf)
+############################### Predict using the train set
+attributes(rf)
+p1 <- predict(rf, train)
+head(p1)
+head(train$Type)
+confusionMatrix(p1,train$Type)
+
+############################## Predict using the test set
+
+p2 <- predict(rf, test)
+confusionMatrix(p2,test$Type)
+
+names(train)
+
+########################################### Tuning the Random Forest #######################3
+
+plot(rf)
+t <- tuneRF(train[,-10],train[,10],stepFactor = 0.5,plot = TRUE,ntreeTry = 250,trace=TRUE,improve=0.05)
+
+########################################## Tuning using the train sret
+
+rf2 <- randomForest(Type~.,data=train,ntree = 250,mtry = 3, importance = TRUE, proximity = TRUE)
+print(rf2)
+p21 <- predict(rf2,train)
+confusionMatrix(p21, train$Type)
+
+
+########################################## Tuning using the predict set
+
+p22 <- predict(rf2,test)
+confusionMatrix(p22,test$Type)
+hist(treesize(rf2),main = "No. of Nodes for the Trees", col="blue")
+varImpPlot(rf2, main = "Variable Importance")
+importance(rf2)
+varUsed(rf2)
+
+
+###########################3 How does pitch belt predict the various classe
+
+############# classe = A means Type = 1
+############# classe = B means Type = 2
+############# classe = C means Type = 3
+############# classe = D means Type = 4
+############# classe = E means Type = 5
+
+partialPlot(rf2, train, pitch_belt, "1")
+partialPlot(rf2, train, pitch_belt, "2")
+partialPlot(rf2, train, pitch_belt, "3")
+partialPlot(rf2, train, pitch_belt, "4")
+partialPlot(rf2, train, pitch_belt, "5")
+
+
+```
+
+## Including Plots
+
+
+```{r  echo=FALSE}
+
+
+
+
+
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
