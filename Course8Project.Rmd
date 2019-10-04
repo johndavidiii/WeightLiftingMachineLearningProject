@@ -1,0 +1,112 @@
+---
+title: "Course8Project"
+author: "John David"
+date: "8/23/2019"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Weight Lifting - Machine Learning Project
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+Approach:
+   My approach was to explore the data set and analyze what actions best describe how to correctly curl weight.  So I explored cleaned and explored the data and used that subset of data to form my models.  I did a K fold cross validation, K=20 and I built an qda model and a lda model and had well ok results then I used a random forest model and tuned it to achieve a 98.89% accuracy on my test data.
+
+Conclusion:
+  It was fun to analyze the data myself but I could have used the randomforest to do it.  All in all I enjoyed this lab and used all my previous John Hopkins classes to find this success.
+
+
+
+References:
+http://www-personal.umich.edu/~johannb/Papers/paper63.pdf
+https://www.google.com/search?q=pitch+roll+and+yaw&tbm=isch&source=iu&ictx=1&fir=4R5jctF0uP_q5M%253A%252CrwdN0Ut4Lf6FUM%252C%252Fm%252F04gmp6w&vet=1&usg=AI4_-kR4vLK3GkH5rhntURhlMELz4kTd0g&sa=X&ved=2ahUKEwiF-4jEhZnkAhVldt8KHU2fB3UQ_B0wG3oECAEQAw#imgrc=4R5jctF0uP_q5M:
+
+
+```{r }
+library("dplyr")
+library("ggplot2")
+library("mlbench")
+library("caret")
+#library("MASS")
+library("randomForest")
+
+trainingDF <- read.csv(file="/Users/douglasashworth/Documents/coursera/DataScience/Course8MachineLearning/pml-training.csv", stringsAsFactors = FALSE)
+
+testDF = read.csv(file="/Users/douglasashworth/Documents/coursera/DataScience/Course8MachineLearning/pml-testing.csv")
+#summary(trainingDF)
+#str(trainingDF)
+names(trainingDF)
+str(trainingDF)
+names(testDF)
+str(testDF)
+
+selectedInputDF = select(trainingDF, roll_forearm, pitch_forearm, yaw_forearm, roll_arm, pitch_arm, yaw_arm, roll_belt, pitch_belt, yaw_belt, classe)
+
+selectedTestInputDF = select(testDF, roll_forearm, pitch_forearm, yaw_forearm, roll_arm, pitch_arm, yaw_arm, roll_belt, pitch_belt, yaw_belt, problem_id)
+
+str(selectedInputDF)
+
+selectedInputDF$classe <- as.factor(selectedInputDF$classe)
+#testClasse <- c()
+#for (k in 1:nrow(selectedTestInputDF)){
+#  testClasse <- c(testClasse,"NA")
+#}
+
+#selectedTestInputDF <- cbind(selectedTestInputDF,testClasse)
+#selectedTestInputDF$testClasse <- as.factor(selectedTestInputDF$testClasse)
+
+head(selectedInputDF,10)
+tail(selectedInputDF)
+#str(selectedInputDF)
+
+finalDF <- selectedInputDF
+
+################################ Random Forest #################################3
+
+# Split the data into training and validation sets
+
+DF51 <- finalDF[,1:9]
+DF52 <- finalDF[,10]
+names(DF51)
+names(DF52)
+rndForestDF <- finalDF
+names(rndForestDF)
+str(rndForestDF)
+
+set.seed(325)
+data_set_size = floor(nrow(selectedInputDF)*0.80)
+index <- sample(1:nrow(selectedInputDF),size = data_set_size)
+train <- selectedInputDF[index,]
+test <- selectedInputDF[-index,]
+#ind <- sample(2,nrow(rndForestDF),replace = TRUE,prob = c(0.7, 0.3))
+#train <- rndForestDF[ind==1,]
+#test <- rndForestDF[ind==2,]
+
+set.seed(757)
+rf <- randomForest(classe ~ .,data=train, ntree = 150,mtry=3,importance=TRUE,proximity=TRUE)
+print(rf)
+plot(rf)
+
+
+
+```
+
+## Including Plots
+
+
+```{r  echo=FALSE}
+
+
+
+
+
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
