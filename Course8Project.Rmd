@@ -38,17 +38,52 @@ library("randomForest")
 
 trainingDF <- read.csv(file="/Users/douglasashworth/Documents/coursera/DataScience/Course8MachineLearning/pml-training.csv", stringsAsFactors = FALSE)
 
-testDF = read.csv(file="/Users/douglasashworth/Documents/coursera/DataScience/Course8MachineLearning/pml-testing.csv")
 #summary(trainingDF)
 #str(trainingDF)
 names(trainingDF)
 str(trainingDF)
-names(testDF)
-str(testDF)
+
+```
+## Lets explore the data and see if we can build the model features via a set of box plot and some common sense
+```{r}
+
+################################ Exploring the Data ######################################
+
+plotDF <- trainingDF
+plotDF$classe <- as.factor(plotDF$classe)
+str(plotDF)
+#print(names(plotDF))
+
+bxpRFA <- ggplot(plotDF,aes(x=classe,y=roll_forearm)) + geom_boxplot()
+plot(bxpRFA)
+
+bxpPFA <- ggplot(plotDF,aes(x=classe,y=pitch_forearm)) + geom_boxplot()
+plot(bxpPFA)
+
+bxpYFA <- ggplot(plotDF,aes(x=classe,y=yaw_forearm)) + geom_boxplot()
+plot(bxpYFA)
+
+bxpRA <- ggplot(plotDF,aes(x=classe,y=roll_arm)) + geom_boxplot()
+plot(bxpRA)
+
+bxpPA <- ggplot(plotDF,aes(x=classe,y=pitch_arm)) + geom_boxplot()
+plot(bxpPA)
+
+bxpYA <- ggplot(plotDF,aes(x=classe,y=yaw_arm)) + geom_boxplot()
+plot(bxpYA)
+
+bxpRB <- ggplot(plotDF,aes(x=classe,y=roll_belt)) + geom_boxplot()
+plot(bxpRB)
+
+bxpPB <- ggplot(plotDF,aes(x=classe,y=pitch_belt)) + geom_boxplot()
+plot(bxpPB)
+
+bxpYB <- ggplot(plotDF,aes(x=classe,y=yaw_belt)) + geom_boxplot()
+plot(bxpYB)
+
+
 
 selectedInputDF = select(trainingDF, roll_forearm, pitch_forearm, yaw_forearm, roll_arm, pitch_arm, yaw_arm, roll_belt, pitch_belt, yaw_belt, classe)
-
-selectedTestInputDF = select(testDF, roll_forearm, pitch_forearm, yaw_forearm, roll_arm, pitch_arm, yaw_arm, roll_belt, pitch_belt, yaw_belt, problem_id)
 
 str(selectedInputDF)
 
@@ -80,33 +115,72 @@ names(rndForestDF)
 str(rndForestDF)
 
 set.seed(325)
-data_set_size = floor(nrow(selectedInputDF)*0.80)
+data_set_size = floor(nrow(selectedInputDF)*0.70)
 index <- sample(1:nrow(selectedInputDF),size = data_set_size)
 train <- selectedInputDF[index,]
 test <- selectedInputDF[-index,]
-#ind <- sample(2,nrow(rndForestDF),replace = TRUE,prob = c(0.7, 0.3))
-#train <- rndForestDF[ind==1,]
-#test <- rndForestDF[ind==2,]
 
 set.seed(757)
 rf <- randomForest(classe ~ .,data=train, ntree = 150,mtry=3,importance=TRUE,proximity=TRUE)
+
+```
+Lets look at the confusion matrix and see what our error is
+```{r}
 print(rf)
+```
+
+
+## Now lets see how the model performs vs the number of trees
+
+
+```{r}
 plot(rf)
+```
+
+## Looks like setting ntree to 150 works as everything stablies by then
+
+## Now tune the tree
 
 
+```{r}
+t <- tuneRF(train[,-10],train[,10],stepFactor = 0.5,plot = TRUE,ntreeTry = 150,trace=TRUE,improve=0.05)
+
+varImpPlot(rf, main = "Variable Importance")
+importance(rf)
 
 ```
 
-## Including Plots
+
+## Looks like mtry set to 3 works minimizes error and 
+## all the model features are important to the success of the model so simple box plots work vey well
 
 
-```{r  echo=FALSE}
+##       Predict using the train set
 
 
+```{r}
 
-
-
+p1 <- predict(rf, train)
+confusionMatrix(p1,train$classe)
 
 ```
+
+
+##      Predict using the test set
+
+
+```{r}
+p2 <- predict(rf, test)
+confusionMatrix(p2,test$classe)
+
+```
+
+## looks like the accuracy is very high approximately 98.95%
+
+
+```{r}
+
+```
+
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
